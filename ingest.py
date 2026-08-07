@@ -1,6 +1,6 @@
 import os
 from pypdf import PdfReader
-from sentence_transformers import SentenceTransformer
+from embeddings import embed_texts
 import chromadb
 
 # ---- Step 1: Load the PDF and extract text ----
@@ -20,19 +20,16 @@ def chunk_text(text, chunk_size=500, overlap=50):
         end = start + chunk_size
         chunk = " ".join(words[start:end])
         chunks.append(chunk)
-        start += chunk_size - overlap  # overlap keeps context continuity between chunks
+        start += chunk_size - overlap
     return chunks
 
 # ---- Step 3: Embed chunks and store in ChromaDB ----
 def build_vector_store(chunks, collection_name="brsr_docs"):
-    print("Loading embedding model (first run downloads it, ~90MB)...")
-    embedder = SentenceTransformer("all-MiniLM-L6-v2")
-
     client = chromadb.PersistentClient(path="./chroma_db")
     collection = client.get_or_create_collection(name=collection_name)
 
     print(f"Embedding {len(chunks)} chunks...")
-    embeddings = embedder.encode(chunks).tolist()
+    embeddings = embed_texts(chunks)
 
     ids = [f"chunk_{i}" for i in range(len(chunks))]
 
