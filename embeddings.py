@@ -8,7 +8,7 @@ load_dotenv()
 # "api"   = Hugging Face Inference API (no torch loaded locally, used for deployment).
 EMBEDDING_PROVIDER = os.getenv("EMBEDDING_PROVIDER", "local")
 
-HF_API_URL = "https://api-inference.huggingface.co/models/sentence-transformers/all-MiniLM-L6-v2"
+HF_API_URL = "https://router.huggingface.co/hf-inference/models/sentence-transformers/all-MiniLM-L6-v2/pipeline/feature-extraction"
 HF_TOKEN = os.getenv("HF_TOKEN")
 
 # Only created if/when the local provider is actually used -- this keeps
