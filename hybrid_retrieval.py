@@ -1,12 +1,6 @@
-import chromadb
 from embeddings import embed_texts
+from vectorstore import get_all_chunks, query_similar
 from rank_bm25 import BM25Okapi
-
-def load_all_chunks(collection_name="brsr_docs"):
-    client = chromadb.PersistentClient(path="./chroma_db")
-    collection = client.get_collection(name=collection_name)
-    all_data = collection.get()
-    return all_data["ids"], all_data["documents"]
 
 def build_bm25_index(chunks):
     tokenized_chunks = [chunk.lower().split() for chunk in chunks]
@@ -21,19 +15,16 @@ def normalize_scores(scores):
     return [(s - min_s) / (max_s - min_s) for s in scores]
 
 def hybrid_search(question, n_results=5, alpha=0.5, collection_name="brsr_docs"):
-    ids, chunks = load_all_chunks(collection_name)
+    ids, chunks = get_all_chunks(collection_name)
+
+    if not chunks:
+        return []
 
     # ---- Vector search scores ----
-    client = chromadb.PersistentClient(path="./chroma_db")
-    collection = client.get_collection(name=collection_name)
-    question_embedding = embed_texts([question])
-
-    vector_results = collection.query(query_embeddings=question_embedding, n_results=len(chunks))
-    vector_ids = vector_results["ids"][0]
-    vector_distances = vector_results["distances"][0]
-    vector_similarities = [1 - d for d in vector_distances]
-
-    vector_score_map = dict(zip(vector_ids, normalize_scores(vector_similarities)))
+    question_embedding = embed_texts([question])[0]
+    vector_results = query_similar(question_embedding, n_results=len(chunks), collection_name=collection_name)
+    vector_score_map = {cid: score for cid, _, score in vector_results}
+    vector_score_map = dict(zip(vector_score_map.keys(), normalize_scores(list(vector_score_map.values()))))
 
     # ---- BM25 keyword scores ----
     bm25 = build_bm25_index(chunks)

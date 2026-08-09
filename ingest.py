@@ -1,7 +1,7 @@
 import os
 from pypdf import PdfReader
 from embeddings import embed_texts
-import chromadb
+from vectorstore import store_chunks
 
 # ---- Step 1: Load the PDF and extract text ----
 def load_pdf_text(filepath):
@@ -23,22 +23,15 @@ def chunk_text(text, chunk_size=500, overlap=50):
         start += chunk_size - overlap
     return chunks
 
-# ---- Step 3: Embed chunks and store in ChromaDB ----
+# ---- Step 3: Embed chunks and store in Qdrant ----
 def build_vector_store(chunks, collection_name="brsr_docs"):
-    client = chromadb.PersistentClient(path="./chroma_db")
-    collection = client.get_or_create_collection(name=collection_name)
-
     print(f"Embedding {len(chunks)} chunks...")
     embeddings = embed_texts(chunks)
 
     ids = [f"chunk_{i}" for i in range(len(chunks))]
 
-    collection.add(
-        documents=chunks,
-        embeddings=embeddings,
-        ids=ids
-    )
-    print(f"Stored {len(chunks)} chunks in ChromaDB.")
+    store_chunks(ids, chunks, embeddings, collection_name)
+    print(f"Stored {len(chunks)} chunks in Qdrant.")
 
 if __name__ == "__main__":
     pdf_path = "data/sample.pdf"
