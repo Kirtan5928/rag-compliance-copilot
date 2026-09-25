@@ -11,8 +11,18 @@ from query import generate_answer
 from vectorstore import get_all_chunks, delete_document
 
 app = FastAPI(title="RAG Compliance Copilot API", version="2.0.0")
-frontend_url = os.getenv("FRONTEND_URL", "http://localhost:5173")
-app.add_middleware(CORSMiddleware, allow_origins=[x.strip() for x in frontend_url.split(",") if x.strip()], allow_methods=["*"], allow_headers=["*"])
+frontend_url = os.getenv("FRONTEND_URL", "")
+allowed_origins = {
+    "http://localhost:5173",
+    "https://rag-frontend-75wd.vercel.app",
+}
+allowed_origins.update(x.strip().rstrip("/") for x in frontend_url.split(",") if x.strip())
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=sorted(allowed_origins),
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 DATA_DIR = "data"
 os.makedirs(DATA_DIR, exist_ok=True)
 
