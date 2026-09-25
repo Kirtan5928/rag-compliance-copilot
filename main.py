@@ -28,7 +28,7 @@ os.makedirs(DATA_DIR, exist_ok=True)
 
 class QueryRequest(BaseModel):
     question: str = Field(min_length=1)
-    hybrid_threshold: float = Field(default=0.8, ge=0.0, le=1.0)
+    hybrid_threshold: float = Field(default=0.0, ge=0.0, le=1.0)
     document_id: str | None = None
 
 class SourceChunk(BaseModel):
