@@ -35,7 +35,7 @@ def store_chunks(chunks, embeddings, document_id, document_name, collection_name
     for chunk, embedding in zip(chunks, embeddings):
         point_id = str(uuid.uuid5(uuid.NAMESPACE_URL, f"{document_id}:{chunk['chunk_index']}:{chunk['page_start']}:{chunk['text'][:80]}"))
         points.append(PointStruct(id=point_id, vector=embedding, payload={
-            "chunk_id": f"{document_id}_{chunk['chunk_index']}",
+            "chunk_id": f"{document_id}_p{chunk['page_start']}_c{chunk['chunk_index']}",
             "document_id": document_id, "document_name": document_name,
             "page_start": chunk["page_start"], "page_end": chunk["page_end"],
             "chunk_index": chunk["chunk_index"], "text": chunk["text"],
