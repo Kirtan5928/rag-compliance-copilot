@@ -1,0 +1,235 @@
+{
+  "dataset": "RIL BRSR FY 2024-25",
+  "source": "https://www.ril.com/reports/BRSR202425.pdf",
+  "version": "1.0",
+  "notes": [
+    "Golden questions are designed to test retrieval, numerical extraction, year disambiguation, citation support, and abstention.",
+    "expected_answer is the exact report value where applicable.",
+    "expected_page is the page number exposed by the current application for the known Principle 6 energy/water tests; other questions intentionally use evidence_keywords instead of assuming an application page mapping."
+  ],
+  "questions": [
+    {
+      "id": "Q01",
+      "category": "energy",
+      "question": "What was the total energy consumed in FY 2024-25?",
+      "expected_answer": "48,16,41,954",
+      "expected_page": 35,
+      "answerable": true,
+      "evidence_keywords": [
+        "Total energy consumed",
+        "48,16,41,954"
+      ]
+    },
+    {
+      "id": "Q02",
+      "category": "energy",
+      "question": "What was the total energy consumed from renewable sources in FY 2024-25?",
+      "expected_answer": "53,44,930",
+      "expected_page": 35,
+      "answerable": true,
+      "evidence_keywords": [
+        "Total energy consumed from renewable sources",
+        "53,44,930"
+      ]
+    },
+    {
+      "id": "Q03",
+      "category": "energy",
+      "question": "What was the total energy consumed from non-renewable sources in FY 2024-25?",
+      "expected_answer": "47,62,97,024",
+      "expected_page": 35,
+      "answerable": true,
+      "evidence_keywords": [
+        "Total energy consumed from non-renewable sources",
+        "47,62,97,024"
+      ]
+    },
+    {
+      "id": "Q04",
+      "category": "energy",
+      "question": "What was total electricity consumption from renewable sources in FY 2024-25?",
+      "expected_answer": "46,312",
+      "expected_page": 35,
+      "answerable": true,
+      "evidence_keywords": [
+        "Total electricity consumption (A)",
+        "46,312"
+      ]
+    },
+    {
+      "id": "Q05",
+      "category": "energy",
+      "question": "What was the energy intensity per rupee of turnover in FY 2024-25?",
+      "expected_answer": "0.0000864 GJ/INR",
+      "expected_page": 35,
+      "answerable": true,
+      "evidence_keywords": [
+        "Energy intensity per rupee of turnover",
+        "0.0000864"
+      ]
+    },
+    {
+      "id": "Q06",
+      "category": "energy",
+      "question": "What was the total energy consumed in FY 2023-24?",
+      "expected_answer": "46,42,00,812",
+      "expected_page": 35,
+      "answerable": true,
+      "evidence_keywords": [
+        "Total energy consumed",
+        "46,42,00,812"
+      ]
+    },
+    {
+      "id": "Q07",
+      "category": "water",
+      "question": "What was the total volume of water withdrawal in FY 2024-25?",
+      "expected_answer": "20,84,65,383 kilolitres",
+      "expected_page": 35,
+      "answerable": true,
+      "evidence_keywords": [
+        "Total volume of water withdrawal",
+        "20,84,65,383"
+      ]
+    },
+    {
+      "id": "Q08",
+      "category": "water",
+      "question": "What was the total volume of water consumption in FY 2024-25?",
+      "expected_answer": "20,84,65,383 kilolitres",
+      "expected_page": 35,
+      "answerable": true,
+      "evidence_keywords": [
+        "Total volume of water consumption",
+        "20,84,65,383"
+      ]
+    },
+    {
+      "id": "Q09",
+      "category": "water",
+      "question": "How much surface water was withdrawn in FY 2024-25?",
+      "expected_answer": "9,72,17,804 kilolitres",
+      "answerable": true,
+      "evidence_keywords": [
+        "Surface water",
+        "9,72,17,804"
+      ]
+    },
+    {
+      "id": "Q10",
+      "category": "water",
+      "question": "What was the water intensity per rupee of turnover in FY 2024-25?",
+      "expected_answer": "0.0000374 KL/INR",
+      "answerable": true,
+      "evidence_keywords": [
+        "Water intensity per rupee of turnover",
+        "0.0000374"
+      ]
+    },
+    {
+      "id": "Q11",
+      "category": "emissions",
+      "question": "What were total Scope 1 emissions in FY 2024-25?",
+      "expected_answer": "3,64,59,294 metric tonnes of CO2 equivalent",
+      "answerable": true,
+      "evidence_keywords": [
+        "Total Scope 1 emissions",
+        "3,64,59,294"
+      ]
+    },
+    {
+      "id": "Q12",
+      "category": "emissions",
+      "question": "What were total Scope 2 emissions in FY 2024-25?",
+      "expected_answer": "14,70,097 metric tonnes of CO2 equivalent",
+      "answerable": true,
+      "evidence_keywords": [
+        "Total Scope 2 emissions",
+        "14,70,097"
+      ]
+    },
+    {
+      "id": "Q13",
+      "category": "air emissions",
+      "question": "What were the VOC emissions in FY 2024-25?",
+      "expected_answer": "48,465 tonnes",
+      "answerable": true,
+      "evidence_keywords": [
+        "Volatile organic compounds (VOC)",
+        "48,465"
+      ]
+    },
+    {
+      "id": "Q14",
+      "category": "waste",
+      "question": "What was the total waste generated in FY 2024-25?",
+      "expected_answer": "7,60,123 metric tonnes",
+      "answerable": true,
+      "evidence_keywords": [
+        "Total",
+        "7,60,123",
+        "Total Waste generated"
+      ]
+    },
+    {
+      "id": "Q15",
+      "category": "waste",
+      "question": "How much waste was recovered in FY 2024-25?",
+      "expected_answer": "7,37,961 metric tonnes",
+      "answerable": true,
+      "evidence_keywords": [
+        "Waste Recovered",
+        "7,37,961"
+      ]
+    },
+    {
+      "id": "Q16",
+      "category": "waste",
+      "question": "How much waste was disposed in FY 2024-25?",
+      "expected_answer": "22,162 metric tonnes",
+      "answerable": true,
+      "evidence_keywords": [
+        "Waste Disposed",
+        "22,162"
+      ]
+    },
+    {
+      "id": "Q17",
+      "category": "workforce",
+      "question": "How many total employees were reported at the end of FY 2024-25?",
+      "expected_answer": "39,158",
+      "answerable": true,
+      "evidence_keywords": [
+        "Total employees",
+        "39,158"
+      ]
+    },
+    {
+      "id": "Q18",
+      "category": "workforce",
+      "question": "What percentage of the Board of Directors were female?",
+      "expected_answer": "14.29%",
+      "answerable": true,
+      "evidence_keywords": [
+        "Board of Directors",
+        "14.29"
+      ]
+    },
+    {
+      "id": "Q19",
+      "category": "abstention",
+      "question": "What was Reliance Industries' total moon-mining revenue in FY 2024-25?",
+      "answerable": false,
+      "expected_answer": null,
+      "evidence_keywords": []
+    },
+    {
+      "id": "Q20",
+      "category": "abstention",
+      "question": "How many Mars exploration missions did Reliance Industries complete in FY 2024-25?",
+      "answerable": false,
+      "expected_answer": null,
+      "evidence_keywords": []
+    }
+  ]
+}
