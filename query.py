@@ -4,6 +4,7 @@ import ollama
 
 load_dotenv()
 LLM_PROVIDER = os.getenv("LLM_PROVIDER", "ollama")
+LLM_MODEL = os.getenv("LLM_MODEL", "openai/gpt-oss-20b")
 
 def generate_answer(question, retrieved):
     if not retrieved:
@@ -29,7 +30,7 @@ Answer:"""
     if LLM_PROVIDER == "groq":
         from groq import Groq
         response = Groq(api_key=os.getenv("GROQ_API_KEY")).chat.completions.create(
-            model="llama-3.1-8b-instant",
+            model=LLM_MODEL,
             messages=[{"role": "user", "content": prompt}],
             temperature=0,
         )
