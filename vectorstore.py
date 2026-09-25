@@ -2,7 +2,7 @@ import os
 import uuid
 from dotenv import load_dotenv
 from qdrant_client import QdrantClient
-from qdrant_client.models import Distance, VectorParams, PointStruct, Filter, FieldCondition, MatchValue
+from qdrant_client.models import Distance, VectorParams, PointStruct, Filter, FieldCondition, MatchValue, PayloadSchemaType
 
 load_dotenv()
 QDRANT_URL = os.getenv("QDRANT_URL")
@@ -22,7 +22,21 @@ def get_client():
 def ensure_collection(collection_name=COLLECTION_NAME):
     client = get_client()
     if not client.collection_exists(collection_name):
-        client.create_collection(collection_name=collection_name, vectors_config=VectorParams(size=VECTOR_SIZE, distance=Distance.COSINE))
+        client.create_collection(
+            collection_name=collection_name,
+            vectors_config=VectorParams(size=VECTOR_SIZE, distance=Distance.COSINE),
+        )
+
+    # document_id is used for filtered retrieval, so Qdrant needs a payload index.
+    collection_info = client.get_collection(collection_name)
+    payload_schema = collection_info.payload_schema or {}
+    if "document_id" not in payload_schema:
+        client.create_payload_index(
+            collection_name=collection_name,
+            field_name="document_id",
+            field_schema=PayloadSchemaType.KEYWORD,
+            wait=True,
+        )
 
 def _document_filter(document_id):
     if not document_id:
