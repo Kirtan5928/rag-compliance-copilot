@@ -1,44 +1,42 @@
-import os
 from pypdf import PdfReader
 from embeddings import embed_texts
 from vectorstore import store_chunks
 
-# ---- Step 1: Load the PDF and extract text ----
-def load_pdf_text(filepath):
+def extract_pdf_pages(filepath):
     reader = PdfReader(filepath)
-    full_text = ""
-    for page in reader.pages:
-        full_text += page.extract_text() + "\n"
-    return full_text
+    pages = []
+    for page_number, page in enumerate(reader.pages, start=1):
+        text = page.extract_text() or ""
+        if text.strip():
+            pages.append((page_number, text))
+    return pages
 
-# ---- Step 2: Chunk the text into small overlapping pieces ----
+def load_pdf_text(filepath):
+    return "\n".join(text for _, text in extract_pdf_pages(filepath))
+
 def chunk_text(text, chunk_size=500, overlap=50):
     words = text.split()
     chunks = []
+    step = max(1, chunk_size - overlap)
     start = 0
     while start < len(words):
-        end = start + chunk_size
-        chunk = " ".join(words[start:end])
-        chunks.append(chunk)
-        start += chunk_size - overlap
+        chunks.append(" ".join(words[start:start + chunk_size]))
+        start += step
     return chunks
 
-# ---- Step 3: Embed chunks and store in Qdrant ----
-def build_vector_store(chunks, collection_name="brsr_docs"):
-    print(f"Embedding {len(chunks)} chunks...")
-    embeddings = embed_texts(chunks)
+def chunk_pages(pages, chunk_size=500, overlap=50):
+    chunks = []
+    for page_number, text in pages:
+        for index, chunk in enumerate(chunk_text(text, chunk_size, overlap)):
+            chunks.append({"text": chunk, "page_start": page_number, "page_end": page_number, "chunk_index": index})
+    return chunks
 
-    ids = [f"chunk_{i}" for i in range(len(chunks))]
-
-    store_chunks(ids, chunks, embeddings, collection_name)
+def build_vector_store(chunks, document_id, document_name, collection_name="brsr_docs"):
+    texts = [chunk["text"] for chunk in chunks]
+    embeddings = embed_texts(texts)
+    store_chunks(chunks, embeddings, document_id, document_name, collection_name)
     print(f"Stored {len(chunks)} chunks in Qdrant.")
 
 if __name__ == "__main__":
-    pdf_path = "data/sample.pdf"
-    text = load_pdf_text(pdf_path)
-    print(f"Extracted {len(text)} characters from PDF.")
-
-    chunks = chunk_text(text)
-    print(f"Split into {len(chunks)} chunks.")
-
-    build_vector_store(chunks)
+    pages = extract_pdf_pages("data/sample.pdf")
+    build_vector_store(chunk_pages(pages), "sample", "sample.pdf")
