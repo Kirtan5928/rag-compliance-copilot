@@ -30,7 +30,40 @@ def expand_lexical_query(question):
 def build_bm25_index(records):
     return BM25Okapi([tokenize(record["text"]) for record in records])
 
-def reciprocal_rank_fusion(dense, bm25_scores, records, alpha=0.5, k=60):
+def structured_query_boost(question, text):
+    """
+    Small deterministic reranking signal for structured percentage questions.
+
+    Rewards chunks that contain the requested category, gender term, and
+    percentage marker together. This addresses table-heavy BRSR queries
+    without changing the normal retrieval path.
+    """
+    q = question.lower()
+    t = text.lower()
+
+    percentage_query = any(term in q for term in ("percentage", "percent", "%"))
+    gender_query = any(term in q for term in ("female", "females", "women", "woman"))
+
+    category_terms = []
+    if "board of directors" in q:
+        category_terms.append("board of directors")
+    if "key management personnel" in q:
+        category_terms.append("key management personnel")
+
+    if not (percentage_query and gender_query and category_terms):
+        return 0.0
+
+    category_match = any(term in t for term in category_terms)
+    gender_match = any(term in t for term in ("female", "females", "women"))
+    percentage_marker = "%" in t or "percentage" in t
+
+    if category_match and gender_match and percentage_marker:
+        return 0.006
+
+    return 0.0
+
+
+def reciprocal_rank_fusion(dense, bm25_scores, records, question=None, alpha=0.5, k=60):
     dense_rank = {
         item["chunk_id"]: rank
         for rank, item in enumerate(dense, start=1)
@@ -56,7 +89,7 @@ def reciprocal_rank_fusion(dense, bm25_scores, records, alpha=0.5, k=60):
         if chunk_id in bm25_rank:
             score += (1 - alpha) / (k + bm25_rank[chunk_id])
 
-        combined.append({**record, "score": score})
+        score += structured_query_boost(question or "", record["text"])\n\n        combined.append({**record, "score": score})
 
     combined.sort(key=lambda item: item["score"], reverse=True)
     return combined
@@ -84,6 +117,7 @@ def hybrid_search(question, n_results=5, alpha=0.5, collection_name="brsr_docs",
         dense,
         bm25_scores,
         records,
+        question=question,
         alpha=alpha,
     )
     return combined[:n_results]
