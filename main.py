@@ -52,20 +52,58 @@ def health_check():
 def ingest_document(file: UploadFile = File(...)):
     if not file.filename or not file.filename.lower().endswith(".pdf"):
         raise HTTPException(status_code=400, detail="Only PDF files are supported.")
+
     document_id = uuid.uuid4().hex
     safe_name = os.path.basename(file.filename)
     save_path = os.path.join(DATA_DIR, f"{document_id}_{safe_name}")
+
     try:
         with open(save_path, "wb") as output:
             shutil.copyfileobj(file.file, output)
-        pages = extract_pdf_pages(save_path)
+
+        try:
+            pages = extract_pdf_pages(save_path)
+        except Exception as exc:
+            raise HTTPException(
+                status_code=422,
+                detail="The uploaded PDF could not be parsed or is corrupted."
+            ) from exc
+
         if not pages:
-            raise HTTPException(status_code=422, detail="No extractable text found in PDF.")
+            raise HTTPException(
+                status_code=422,
+                detail="No extractable text found in PDF. Scanned/image-only PDFs are not supported."
+            )
+
         chunks = chunk_pages(pages)
-        build_vector_store(chunks, document_id=document_id, document_name=safe_name)
-        return {"document_id": document_id, "filename": safe_name, "pages_extracted": len(pages), "characters_extracted": sum(len(t) for _, t in pages), "chunks_stored": len(chunks)}
+        if not chunks:
+            raise HTTPException(
+                status_code=422,
+                detail="The PDF did not produce any searchable text chunks."
+            )
+
+        try:
+            build_vector_store(
+                chunks,
+                document_id=document_id,
+                document_name=safe_name
+            )
+        except Exception as exc:
+            raise HTTPException(
+                status_code=503,
+                detail="Document storage is temporarily unavailable. Please try again."
+            ) from exc
+
+        return {
+            "document_id": document_id,
+            "filename": safe_name,
+            "pages_extracted": len(pages),
+            "characters_extracted": sum(len(t) for _, t in pages),
+            "chunks_stored": len(chunks)
+        }
     finally:
-        if os.path.exists(save_path): os.remove(save_path)
+        if os.path.exists(save_path):
+            os.remove(save_path)
 
 @app.get("/documents")
 def list_documents():
@@ -86,9 +124,37 @@ def remove_document(document_id: str):
 @app.post("/query", response_model=QueryResponse)
 def query_document(request: QueryRequest):
     question = request.question.strip()
-    if not question: raise HTTPException(status_code=400, detail="Question cannot be empty.")
-    all_retrieved = hybrid_search(question, n_results=5, alpha=0.5, document_id=request.document_id)
-    retrieved = [item for item in all_retrieved if item["score"] >= request.hybrid_threshold]
-    answer = generate_answer(question, retrieved)
-    sources = [SourceChunk(**{**item, "score": round(item["score"], 3)}) for item in retrieved]
+    if not question:
+        raise HTTPException(status_code=400, detail="Question cannot be empty.")
+
+    try:
+        all_retrieved = hybrid_search(
+            question,
+            n_results=5,
+            alpha=0.5,
+            document_id=request.document_id
+        )
+    except Exception as exc:
+        raise HTTPException(
+            status_code=503,
+            detail="Document retrieval is temporarily unavailable. Please try again."
+        ) from exc
+
+    retrieved = [
+        item for item in all_retrieved
+        if item["score"] >= request.hybrid_threshold
+    ]
+
+    try:
+        answer = generate_answer(question, retrieved)
+    except Exception as exc:
+        raise HTTPException(
+            status_code=503,
+            detail="The answer generation service is temporarily unavailable. Please try again."
+        ) from exc
+
+    sources = [
+        SourceChunk(**{**item, "score": round(item["score"], 3)})
+        for item in retrieved
+    ]
     return QueryResponse(answer=answer, sources=sources)
