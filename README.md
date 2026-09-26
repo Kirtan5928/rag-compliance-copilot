@@ -4,7 +4,7 @@ A retrieval-augmented generation system for querying SEBI BRSR/ESG reports with 
 
 ## Current status
 
-**Core implementation complete. Final evaluation and presentation/documentation are the remaining project tasks.**
+**Core implementation complete. Project packaging and final evaluation are in progress.**
 
 ### What the system does
 
@@ -20,10 +20,8 @@ A retrieval-augmented generation system for querying SEBI BRSR/ESG reports with 
    - targeted structured reranking for table-heavy percentage questions
 7. Sends only retrieved evidence to the LLM.
 8. Generates a grounded answer with an explicit abstention response when the report does not support the requested information.
-9. Returns the source chunks with document and page metadata.
+9. Returns source chunks with document and page metadata.
 10. Supports document-level filtering and deletion.
-
-The retrieval design follows the standard hybrid-search pattern of combining semantic and lexical signals before a later ranking stage. RRF is used because dense and BM25 scores are on different scales and should not be directly added. 
 
 ## Architecture
 
@@ -32,47 +30,45 @@ The retrieval design follows the standard hybrid-search pattern of combining sem
 PDF
  │
  ▼
-Page-aware PDF extraction
+PDF validation
  │
  ▼
-Page-aware chunking
+Page-aware extraction
  │
- ├──────────────► text + page metadata
+ ▼
+Page-aware chunking ───────────────► text + page metadata
  │
  ▼
 MiniLM embeddings
  │
  ▼
-Qdrant
- │
- └── document_id / page / chunk metadata
+Qdrant vector store
 
 
                           QUERY
 User question
  │
- ├──────────────► Dense retrieval
- │
- └──────────────► BM25 lexical retrieval
+ ├──────────────► Dense retrieval ───┐
+ │                                   │
+ └──────────────► BM25 retrieval ────┤
+                                     ▼
+                            Reciprocal Rank Fusion
+                                     │
+                                     ▼
+                         Targeted structured reranking
+                                     │
+                                     ▼
+                              Top-5 evidence
+                                     │
+                                     ▼
+                            Grounded LLM generation
+                                     │
+                         ┌───────────┴───────────┐
+                         ▼                       ▼
+                   Supported answer          Abstention
                          │
                          ▼
-                 Reciprocal Rank Fusion
-                         │
-                         ▼
-              Structured query reranking
-                         │
-                         ▼
-                    Top-5 evidence
-                         │
-                         ▼
-                 Grounded LLM generation
-                         │
-             ┌───────────┴───────────┐
-             ▼                       ▼
-       Supported answer          Abstention
-             │
-             ▼
-      Answer + page sources
+                  Answer + page sources
 ```
 
 ## Key engineering features
@@ -88,58 +84,84 @@ Each chunk retains:
 - `chunk_id`
 - source text
 
-This allows answers to be traced back to the report rather than presenting unsupported LLM output.
+This makes generated answers auditable against the original report.
 
 ### Hybrid retrieval
 
-Dense retrieval helps with semantic/paraphrased questions, while BM25 helps with exact terminology, table labels, identifiers, and numerical phrases. RRF combines the ranked lists without comparing their raw score scales.
+Dense retrieval captures semantic similarity and paraphrased questions. BM25 captures exact terminology, table labels, identifiers, and numerical expressions. RRF combines ranked lists without assuming that dense and BM25 raw scores share the same scale.
 
 ### Structured reranking
 
-BRSR reports contain structured tables where lexical evidence can be more informative than general semantic similarity. A small deterministic boost is applied only to percentage questions that explicitly target categories such as the Board of Directors or Key Management Personnel and where the candidate contains the relevant category, gender term, and percentage marker.
+BRSR reports contain structured tables where exact category and percentage evidence can matter more than broad semantic similarity. A narrow deterministic boost is applied only to specific percentage questions targeting female representation in categories such as Board of Directors or Key Management Personnel.
 
 ### Grounded generation and abstention
 
 The generation prompt instructs the LLM to:
 
-- use only supplied report context
-- preserve numerical values exactly
-- avoid inventing missing information
-- respect the requested reporting year/table row
-- return a fixed abstention message when evidence is insufficient
+- use only supplied report context;
+- preserve numerical values exactly;
+- respect the requested reporting year and table row;
+- avoid unsupported inference;
+- return a fixed abstention response when the context is insufficient.
 
 ## Evaluation
 
-The project contains a 20-question golden dataset based on the RIL BRSR FY 2024-25 report:
+The project contains a fixed 20-question golden dataset based on the RIL BRSR FY 2024-25 report:
 
 - **18 answerable questions**
 - **2 unanswerable questions**
-- energy, water, emissions, waste, workforce, and abstention cases
-- numerical extraction and year-disambiguation cases
+- numerical extraction and table-oriented cases
+- reporting-year disambiguation
 - evidence-keyword validation
+- explicit abstention cases
 
-The evaluation reports:
+### Retrieval benchmark
 
-- **Recall@5** — whether required evidence appears in the five chunks passed to the generator
-- **MRR** — how highly the first relevant chunk is ranked
-- **Answer accuracy** — whether the generated answer matches the expected value
-- **Abstention accuracy** — whether unsupported questions are rejected correctly
+| Retrieval strategy | Recall@5 | MRR |
+|---|---:|---:|
+| Dense | 77.78% | 72.22% |
+| BM25 | 94.44% | 83.52% |
+| Hybrid + structured reranking | **100.00%** | 82.13% |
 
-These metrics separate retrieval quality from final answer quality, which is important when diagnosing RAG failures. [RAG evaluation survey](https://arxiv.org/abs/2405.07437)
+These are retrieval-only measurements. The hybrid configuration achieved complete Top-5 evidence coverage on this benchmark, while BM25 had slightly higher MRR. The two metrics capture different properties.
 
-Run the full evaluation with:
+### Previous end-to-end baseline
+
+A previous clean end-to-end run before the final structured-query fix recorded:
+
+| Metric | Result |
+|---|---:|
+| Recall@5 | 94.44% |
+| MRR | 79.35% |
+| Answer accuracy | 94.44% |
+| Abstention accuracy | 100.00% |
+
+The final post-fix 20-question LLM evaluation remains pending because the available LLM quota was exhausted during the previous attempt. No final post-fix generation metric is claimed until that run completes.
+
+Run it with:
 
 ```powershell
 python evaluation\run_evaluation.py
 ```
 
-The full evaluation invokes the configured LLM, so it should be run deliberately rather than repeatedly during development. The final post-fix run is pending because the available LLM quota was exhausted during the previous attempt.
+The retrieval-only benchmark can be run repeatedly without calling the LLM:
 
-A retrieval-only benchmark is also provided in `evaluation/benchmark_retrieval.py` and does not call the LLM.
+```powershell
+python evaluation\benchmark_retrieval.py
+```
+
+## Documentation
+
+- [System architecture](docs/ARCHITECTURE.md)
+- [End-to-end workflow](docs/WORKFLOW.md)
+- [Retrieval pipeline](docs/RETRIEVAL_PIPELINE.md)
+- [Project report draft](docs/PROJECT_REPORT.md)
+- [Evaluation methodology](docs/EVALUATION.md)
 
 ## Tech stack
 
 ### Backend
+
 - Python
 - FastAPI
 - pypdf
@@ -149,12 +171,14 @@ A retrieval-only benchmark is also provided in `evaluation/benchmark_retrieval.p
 - Groq
 
 ### Frontend
+
 - React
 - Vite
 - JavaScript
 - CSS
 
 ### Deployment
+
 - Backend: Render
 - Frontend: Vercel
 - Vector database: Qdrant Cloud
@@ -207,7 +231,7 @@ The frontend defaults to `http://localhost:8000` when `VITE_API_URL` is not conf
 The backend validates:
 
 - PDF file type
-- 100 MB upload limit
+- **100 MB upload limit**
 - corrupt/unreadable PDFs
 - PDFs without extractable text
 - PDFs that produce no searchable chunks
@@ -215,26 +239,27 @@ The backend validates:
 - retrieval failures
 - answer-generation failures
 
-The frontend mirrors important upload restrictions and surfaces API errors to the user.
+The frontend mirrors the upload restriction and surfaces API errors to the user.
 
 ## Project roadmap
 
 - [x] **M1 — Core RAG:** PDF ingestion, chunking, embeddings, vector retrieval, grounded generation
-- [x] **M2 — Evidence grounding:** page-aware sources, document IDs, document filtering, abstention
+- [x] **M2 — Evidence grounding:** page-aware sources, document IDs, filtering, abstention
 - [x] **M3 — Retrieval:** BM25 + dense hybrid search, RRF, structured reranking
 - [x] **M4 — Application:** FastAPI backend, React frontend, deployment
-- [x] **M5 — Hardening:** validation, error handling, upload limits, deletion UX, CI checks
-- [ ] **M6 — Final evaluation:** complete post-fix golden-set evaluation and retrieval benchmark
-- [ ] **M7 — Finalization:** results tables, architecture diagrams, screenshots, README/report, presentation and viva preparation
+- [x] **M5 — Hardening:** validation, error handling, 100 MB upload limit, deletion UX, CI checks
+- [ ] **M6 — Final evaluation:** complete post-fix golden-set evaluation
+- [ ] **M7 — Finalization:** diagrams, screenshots, final report, presentation and viva preparation
 
 ## Limitations
 
-- The current system is optimized for text-based PDFs; scanned/image-only PDFs are rejected.
-- The golden dataset is currently based on one BRSR report, so broader multi-company generalization still requires additional evaluation.
-- The LLM is not trusted as an independent source of facts; its output is constrained by retrieved report context.
-- Retrieval scores are ranking signals rather than probabilities of answer correctness.
+- The current extraction path is text-based; scanned/image-only PDFs are rejected.
+- The golden dataset currently represents one BRSR report, so broader multi-company evaluation is still required.
+- The LLM is not treated as an independent source of facts.
+- Retrieval scores are ranking signals, not probabilities of answer correctness.
+- Full end-to-end evaluation depends on available LLM quota.
 
-## Research direction
+## Research contribution
 
 The main experimentally testable contribution is the comparison of retrieval strategies on structured compliance reports:
 
@@ -248,4 +273,4 @@ Hybrid RRF
 Hybrid RRF + targeted structured reranking
 ```
 
-The final report should use the fixed golden set to quantify how each retrieval strategy affects Recall@5 and MRR, while the full RAG evaluation separately measures answer and abstention accuracy.
+The final report should quantify how these strategies affect Recall@5 and MRR and separately report final answer and abstention accuracy.
