@@ -89,7 +89,9 @@ def reciprocal_rank_fusion(dense, bm25_scores, records, question=None, alpha=0.5
         if chunk_id in bm25_rank:
             score += (1 - alpha) / (k + bm25_rank[chunk_id])
 
-        score += structured_query_boost(question or "", record["text"])\n\n        combined.append({**record, "score": score})
+        score += structured_query_boost(question or "", record["text"])
+
+        combined.append({**record, "score": score})
 
     combined.sort(key=lambda item: item["score"], reverse=True)
     return combined
