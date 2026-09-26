@@ -54,9 +54,9 @@ def ingest_document(file: UploadFile = File(...)):
     if not file.filename or not file.filename.lower().endswith(".pdf"):
         raise HTTPException(status_code=400, detail="Only PDF files are supported.")
 
-    max_file_size = 25 * 1024 * 1024
+    max_file_size = 100 * 1024 * 1024
     if file.size is not None and file.size > max_file_size:
-        raise HTTPException(status_code=413, detail="PDF files must be 25 MB or smaller.")
+        raise HTTPException(status_code=413, detail="PDF files must be 100 MB or smaller.")
 
     document_id = uuid.uuid4().hex
     safe_name = os.path.basename(file.filename)
