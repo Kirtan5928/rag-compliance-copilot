@@ -14,6 +14,7 @@ app = FastAPI(title="RAG Compliance Copilot API", version="2.0.0")
 frontend_url = os.getenv("FRONTEND_URL", "")
 allowed_origins = {
     "http://localhost:5173",
+    "http://localhost:4173",
     "https://rag-frontend-75wd.vercel.app",
 }
 allowed_origins.update(x.strip().rstrip("/") for x in frontend_url.split(",") if x.strip())
