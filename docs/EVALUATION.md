@@ -2,12 +2,14 @@
 
 ## Dataset
 
-The project uses a fixed golden set derived from the Reliance Industries BRSR FY 2024-25 report.
+The project uses a fixed 20-question golden set derived from the Reliance Industries BRSR FY 2024-25 report:
 
-- 20 total questions
-- 18 answerable
-- 2 intentionally unanswerable
-- Categories: energy, water, emissions, air emissions, waste, workforce, abstention
+- 18 answerable questions
+- 2 intentionally unanswerable questions
+- numerical and table-oriented questions
+- reporting-year disambiguation
+- evidence-keyword checks
+- explicit abstention cases
 
 The dataset stores expected answers and evidence keywords so retrieval and generation can be evaluated separately.
 
@@ -17,17 +19,17 @@ The dataset stores expected answers and evidence keywords so retrieval and gener
 
 For each answerable question, retrieval succeeds when the Top-5 chunks contain all expected evidence keywords.
 
-```
-Recall@5 = relevant answerable queries retrieved in Top-5
-          --------------------------------------------
-                  total answerable queries
+```text
+Recall@5 = answerable queries with required evidence in Top-5
+           -----------------------------------------------
+                    total answerable queries
 ```
 
 ### Mean Reciprocal Rank (MRR)
 
 For each answerable query, the reciprocal of the rank of the first chunk containing all expected evidence keywords is calculated.
 
-```
+```text
 MRR = average(1 / first relevant rank)
 ```
 
@@ -35,42 +37,51 @@ Recall@5 measures whether the generator receives the evidence at all. MRR additi
 
 ## Retrieval comparison
 
-`evaluation/benchmark_retrieval.py` compares:
+The retrieval benchmark compares:
 
 1. Dense retrieval
 2. BM25 retrieval
-3. Hybrid RRF + structured reranking
+3. Hybrid RRF + targeted structured reranking
 
-This benchmark does not call the LLM, so it can be run repeatedly without consuming Groq generation quota.
+This benchmark does not call the LLM, so it can be run repeatedly without consuming generation quota.
 
-Run:
+Previously recorded results:
 
-```powershell
-python evaluation\benchmark_retrieval.py
-```
+| Retrieval strategy | Recall@5 | MRR |
+|---|---:|---:|
+| Dense | 77.78% | 72.22% |
+| BM25 | 94.44% | 83.52% |
+| Hybrid + structured reranking | 100.00% | 82.13% |
 
-Results are written to:
-
-```text
-evaluation/results/retrieval_benchmark.json
-```
+The hybrid configuration achieved complete Top-5 evidence coverage on this benchmark, while BM25 had a slightly higher MRR. These metrics measure different properties and should not be collapsed into a single score.
 
 ## Full RAG evaluation
 
-`evaluation/run_evaluation.py` evaluates the complete retrieval + generation pipeline.
-
-It measures:
+The full evaluator measures:
 
 - Recall@5
 - MRR
 - Answer accuracy
 - Abstention accuracy
 
-Run it deliberately because every answerable question invokes the configured LLM.
+A previous clean end-to-end evaluation before the final structured-query fix recorded:
+
+| Metric | Result |
+|---|---:|
+| Recall@5 | 94.44% |
+| MRR | 79.35% |
+| Answer accuracy | 94.44% |
+| Abstention accuracy | 100.00% |
+
+These values are a **previous baseline**, not the final post-fix result. The final 20-question run is pending because the available LLM quota was exhausted during the previous attempt.
+
+Run the evaluation with:
 
 ```powershell
-python evaluation\run_evaluation.py
+python evaluation\\run_evaluation.py
 ```
+
+Detailed per-question results are written to evaluation/results/latest_results.json.
 
 ## Interpretation
 
@@ -83,4 +94,4 @@ Retrieval and generation failures should be diagnosed separately.
 | Incorrect | Any | Retrieval problem |
 | Abstention correct | — | Unsupported query handled safely |
 
-The final report should compare dense, BM25, and hybrid retrieval using the same fixed questions and corpus. If hybrid retrieval does not improve the measured workload, that result should be reported rather than assuming hybrid search is automatically better.
+This separation follows the general RAG evaluation principle that retrieval relevance and generation quality should be measured as distinct components. See the RAG evaluation survey: https://arxiv.org/abs/2405.07437.
