@@ -1,5 +1,10 @@
 import json
+import sys
 from pathlib import Path
+
+# Add project root so top-level backend modules are importable when this file is run directly.
+ROOT_DIR = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT_DIR))
 
 from embeddings import embed_texts
 from hybrid_retrieval import hybrid_search, build_bm25_index, expand_lexical_query
