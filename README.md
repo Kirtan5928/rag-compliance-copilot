@@ -125,7 +125,7 @@ The evaluation reports:
 - **Answer accuracy** — whether the generated answer matches the expected value
 - **Abstention accuracy** — whether unsupported questions are rejected correctly
 
-These metrics separate retrieval quality from final answer quality, which is important when diagnosing RAG failures. citeturn0search1turn0search2
+These metrics separate retrieval quality from final answer quality, which is important when diagnosing RAG failures. [RAG evaluation survey](https://arxiv.org/abs/2405.07437)
 
 Run the full evaluation with:
 
@@ -133,7 +133,7 @@ Run the full evaluation with:
 python evaluation\run_evaluation.py
 ```
 
-The full evaluation invokes the configured LLM, so it should be run deliberately rather than repeatedly during development.
+The full evaluation invokes the configured LLM, so it should be run deliberately rather than repeatedly during development. The final post-fix run is pending because the available LLM quota was exhausted during the previous attempt.
 
 A retrieval-only benchmark is also provided in `evaluation/benchmark_retrieval.py` and does not call the LLM.
 
@@ -207,7 +207,7 @@ The frontend defaults to `http://localhost:8000` when `VITE_API_URL` is not conf
 The backend validates:
 
 - PDF file type
-- 25 MB upload limit
+- 100 MB upload limit
 - corrupt/unreadable PDFs
 - PDFs without extractable text
 - PDFs that produce no searchable chunks
