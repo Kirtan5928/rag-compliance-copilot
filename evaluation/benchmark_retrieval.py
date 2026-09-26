@@ -34,7 +34,8 @@ def relevant_rank(retrieved, keywords):
 
 
 def evaluate_run(results):
-    answerable = [item for item in results if item["answerable"]]
+    # main() already filters the golden dataset to answerable questions.
+    answerable = results
     hits = [item for item in answerable if item["evidence_found"]]
     reciprocal_ranks = [
         1.0 / item["relevant_rank"]
