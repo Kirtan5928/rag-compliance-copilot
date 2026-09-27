@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="520" viewBox="0 0 1200 520">
+<rect width="1200" height="520" rx="28" fill="#0d1117"/>
+<text x="70" y="70" fill="#f0f6fc" font-family="Arial,sans-serif" font-size="30" font-weight="700">Final end-to-end evaluation</text>
+<text x="70" y="106" fill="#8b949e" font-family="Arial,sans-serif" font-size="17">20-question golden set • 18 answerable • 2 unanswerable</text>
+<rect x="70" y="150" width="250" height="270" rx="18" fill="#161b22" stroke="#30363d"/>
+<rect x="345" y="150" width="250" height="270" rx="18" fill="#161b22" stroke="#30363d"/>
+<rect x="620" y="150" width="250" height="270" rx="18" fill="#161b22" stroke="#30363d"/>
+<rect x="895" y="150" width="235" height="270" rx="18" fill="#161b22" stroke="#30363d"/>
+<text x="195" y="205" text-anchor="middle" fill="#8b949e" font-family="Arial,sans-serif" font-size="16">RECALL@5</text>
+<text x="195" y="290" text-anchor="middle" fill="#39d353" font-family="Arial,sans-serif" font-size="56" font-weight="700">100%</text>
+<text x="195" y="340" text-anchor="middle" fill="#c9d1d9" font-family="Arial,sans-serif" font-size="15">all 18 answerable</text>
+<text x="470" y="205" text-anchor="middle" fill="#8b949e" font-family="Arial,sans-serif" font-size="16">MRR</text>
+<text x="470" y="290" text-anchor="middle" fill="#58a6ff" font-family="Arial,sans-serif" font-size="56" font-weight="700">0.8213</text>
+<text x="470" y="340" text-anchor="middle" fill="#c9d1d9" font-family="Arial,sans-serif" font-size="15">ranking quality</text>
+<text x="745" y="205" text-anchor="middle" fill="#8b949e" font-family="Arial,sans-serif" font-size="16">ANSWER ACCURACY</text>
+<text x="745" y="290" text-anchor="middle" fill="#39d353" font-family="Arial,sans-serif" font-size="56" font-weight="700">100%</text>
+<text x="745" y="340" text-anchor="middle" fill="#c9d1d9" font-family="Arial,sans-serif" font-size="15">20 / 20 evaluated</text>
+<text x="1012" y="205" text-anchor="middle" fill="#8b949e" font-family="Arial,sans-serif" font-size="16">ABSTENTION</text>
+<text x="1012" y="290" text-anchor="middle" fill="#39d353" font-family="Arial,sans-serif" font-size="56" font-weight="700">100%</text>
+<text x="1012" y="340" text-anchor="middle" fill="#c9d1d9" font-family="Arial,sans-serif" font-size="15">2 / 2 unsupported</text>
+<text x="70" y="470" fill="#8b949e" font-family="Arial,sans-serif" font-size="14">Benchmark-specific results; not a guarantee for arbitrary unseen PDFs.</text>
+</svg>
