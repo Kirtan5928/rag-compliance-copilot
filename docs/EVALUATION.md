@@ -45,43 +45,41 @@ The retrieval benchmark compares:
 
 This benchmark does not call the LLM, so it can be run repeatedly without consuming generation quota.
 
-Previously recorded results:
-
 | Retrieval strategy | Recall@5 | MRR |
 |---|---:|---:|
 | Dense | 77.78% | 72.22% |
 | BM25 | 94.44% | 83.52% |
-| Hybrid + structured reranking | 100.00% | 82.13% |
+| Hybrid + structured reranking | **100.00%** | 82.13% |
 
 The hybrid configuration achieved complete Top-5 evidence coverage on this benchmark, while BM25 had a slightly higher MRR. These metrics measure different properties and should not be collapsed into a single score.
 
-## Full RAG evaluation
+## Final end-to-end RAG evaluation
 
-The full evaluator measures:
+The final run was completed successfully on 27 September 2026 using the 20-question golden set.
 
-- Recall@5
-- MRR
-- Answer accuracy
-- Abstention accuracy
-
-A previous clean end-to-end evaluation before the final structured-query fix recorded:
-
-| Metric | Result |
+| Metric | Final result |
 |---|---:|
-| Recall@5 | 94.44% |
-| MRR | 79.35% |
-| Answer accuracy | 94.44% |
-| Abstention accuracy | 100.00% |
+| Questions | 20 |
+| Answerable questions | 18 |
+| Unanswerable questions | 2 |
+| Recall@5 | **100.00%** |
+| MRR | **0.8213** |
+| Answer accuracy | **100.00%** |
+| Abstention accuracy | **100.00%** |
 
-These values are a **previous baseline**, not the final post-fix result. The final 20-question run is pending because the available LLM quota was exhausted during the previous attempt.
+All 18 answerable questions had the required evidence within the Top-5 retrieval results. All 20 generated responses matched the evaluator's expected outcomes, including correct abstention on both intentionally unanswerable questions.
 
-Run the evaluation with:
+Detailed per-question results are saved to:
+
+`evaluation/results/latest_results.json`
+
+Run the full evaluation with:
 
 ```powershell
 python evaluation\\run_evaluation.py
 ```
 
-Detailed per-question results are written to evaluation/results/latest_results.json.
+The evaluator writes the latest detailed results to `evaluation/results/latest_results.json`.
 
 ## Interpretation
 
@@ -94,4 +92,18 @@ Retrieval and generation failures should be diagnosed separately.
 | Incorrect | Any | Retrieval problem |
 | Abstention correct | — | Unsupported query handled safely |
 
-This separation follows the general RAG evaluation principle that retrieval relevance and generation quality should be measured as distinct components. See the RAG evaluation survey: https://arxiv.org/abs/2405.07437.
+The evaluation design follows the broader RAG evaluation principle of measuring retrieval and generation as distinct components. See the RAG evaluation survey: https://arxiv.org/abs/2405.07437.
+
+## Scope of the reported metrics
+
+The 100% results are **benchmark-specific**. They describe performance on this fixed RIL BRSR FY 2024-25 question set and should not be interpreted as a guarantee of 100% accuracy for arbitrary PDFs or unseen question distributions.
+
+The application is designed to ingest other text-based PDFs, but new document collections require their own evaluation set to establish retrieval and answer quality.
+
+## Limitations
+
+- The golden set currently covers one BRSR report.
+- Scanned/image-only PDFs are not supported by the current text-extraction path.
+- Broader multi-company and multi-year evaluation is still required.
+- Retrieval scores are ranking signals, not probabilities.
+- The evaluator's answer-accuracy metric is based on the project's expected-answer matching logic; it is not a human study or a claim of universal factual accuracy.
