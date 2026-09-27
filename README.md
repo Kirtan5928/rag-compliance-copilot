@@ -4,7 +4,7 @@ A retrieval-augmented generation system for querying SEBI BRSR/ESG reports with 
 
 ## Current status
 
-**Core implementation complete. Project packaging and final evaluation are in progress.**
+**Core implementation, deployment, packaging, and final benchmark evaluation complete.**
 
 ### What the system does
 
@@ -43,7 +43,6 @@ MiniLM embeddings
  │
  ▼
 Qdrant vector store
-
 
                           QUERY
 User question
@@ -104,7 +103,7 @@ The generation prompt instructs the LLM to:
 - avoid unsupported inference;
 - return a fixed abstention response when the context is insufficient.
 
-## Evaluation
+## Final evaluation
 
 The project contains a fixed 20-question golden dataset based on the RIL BRSR FY 2024-25 report:
 
@@ -125,37 +124,44 @@ The project contains a fixed 20-question golden dataset based on the RIL BRSR FY
 
 These are retrieval-only measurements. The hybrid configuration achieved complete Top-5 evidence coverage on this benchmark, while BM25 had slightly higher MRR. The two metrics capture different properties.
 
-### Previous end-to-end baseline
-
-A previous clean end-to-end run before the final structured-query fix recorded:
+### Final end-to-end benchmark
 
 | Metric | Result |
 |---|---:|
-| Recall@5 | 94.44% |
-| MRR | 79.35% |
-| Answer accuracy | 94.44% |
-| Abstention accuracy | 100.00% |
+| Questions | 20 |
+| Answerable | 18 |
+| Unanswerable | 2 |
+| Recall@5 | **100.00%** |
+| MRR | **0.8213** |
+| Answer accuracy | **100.00%** |
+| Abstention accuracy | **100.00%** |
 
-The final post-fix 20-question LLM evaluation remains pending because the available LLM quota was exhausted during the previous attempt. No final post-fix generation metric is claimed until that run completes.
+The final evaluation completed successfully. The detailed per-question results are stored in `evaluation/results/latest_results.json`.
 
-Run it with:
+Run the evaluator with:
 
 ```powershell
-python evaluation\run_evaluation.py
+python evaluation\\run_evaluation.py
 ```
 
 The retrieval-only benchmark can be run repeatedly without calling the LLM:
 
 ```powershell
-python evaluation\benchmark_retrieval.py
+python evaluation\\benchmark_retrieval.py
 ```
+
+### Scope of the results
+
+The 100% figures are **specific to the fixed RIL BRSR FY 2024-25 benchmark**. They are not a guarantee of 100% accuracy for arbitrary PDFs or unseen question distributions.
+
+The application is designed to ingest other text-based PDFs, but a new document corpus requires its own evaluation set to establish retrieval and answer quality.
 
 ## Documentation
 
 - [System architecture](docs/ARCHITECTURE.md)
 - [End-to-end workflow](docs/WORKFLOW.md)
 - [Retrieval pipeline](docs/RETRIEVAL_PIPELINE.md)
-- [Project report draft](docs/PROJECT_REPORT.md)
+- [Project report](docs/PROJECT_REPORT.md)
 - [Evaluation methodology](docs/EVALUATION.md)
 
 ## Tech stack
@@ -248,8 +254,8 @@ The frontend mirrors the upload restriction and surfaces API errors to the user.
 - [x] **M3 — Retrieval:** BM25 + dense hybrid search, RRF, structured reranking
 - [x] **M4 — Application:** FastAPI backend, React frontend, deployment
 - [x] **M5 — Hardening:** validation, error handling, 100 MB upload limit, deletion UX, CI checks
-- [ ] **M6 — Final evaluation:** complete post-fix golden-set evaluation
-- [ ] **M7 — Finalization:** diagrams, screenshots, final report, presentation and viva preparation
+- [x] **M6 — Final evaluation:** completed 20-question golden-set evaluation
+- [x] **M7 — Finalization:** architecture, workflow, retrieval, evaluation and project-report documentation
 
 ## Limitations
 
@@ -257,7 +263,7 @@ The frontend mirrors the upload restriction and surfaces API errors to the user.
 - The golden dataset currently represents one BRSR report, so broader multi-company evaluation is still required.
 - The LLM is not treated as an independent source of facts.
 - Retrieval scores are ranking signals, not probabilities of answer correctness.
-- Full end-to-end evaluation depends on available LLM quota.
+- Final answer accuracy is benchmark-specific and based on the project's expected-answer matching logic.
 
 ## Research contribution
 
@@ -273,4 +279,4 @@ Hybrid RRF
 Hybrid RRF + targeted structured reranking
 ```
 
-The final report should quantify how these strategies affect Recall@5 and MRR and separately report final answer and abstention accuracy.
+The final benchmark reports both retrieval and end-to-end metrics, with abstention explicitly evaluated for unsupported questions.
