@@ -1,196 +1,299 @@
-# RAG Compliance Copilot
+<div align="center">
 
-A retrieval-augmented generation system for querying SEBI BRSR/ESG reports with grounded, source-backed answers. The system is designed for compliance-style questions where exact figures, reporting years, table rows, and traceable evidence matter.
+# ⚡ RAG Compliance Copilot
 
-## Current status
+### Evidence-grounded question answering for BRSR / ESG reports
 
-**Core implementation, deployment, packaging, and final benchmark evaluation complete.**
+**Upload a report → retrieve the right evidence → generate a grounded answer → inspect the source**
 
-### What the system does
+<p>
+  <img src="https://img.shields.io/badge/Status-Production%20Ready-39d353?style=for-the-badge&labelColor=161b22" alt="Status">
+  <img src="https://img.shields.io/badge/RAG-Hybrid%20Retrieval-58a6ff?style=for-the-badge&labelColor=161b22" alt="RAG">
+  <img src="https://img.shields.io/badge/Evaluation-20%20Questions-6e40c9?style=for-the-badge&labelColor=161b22" alt="Evaluation">
+  <img src="https://img.shields.io/badge/Recall%40K5-100%25-39d353?style=for-the-badge&labelColor=161b22" alt="Recall">
+</p>
 
-1. Uploads a BRSR/ESG PDF.
-2. Extracts text with page numbers preserved.
-3. Splits the report into page-aware searchable chunks.
-4. Generates dense embeddings with `sentence-transformers/all-MiniLM-L6-v2`.
-5. Stores chunks and metadata in Qdrant.
-6. Retrieves candidates with:
-   - dense semantic retrieval
-   - BM25 lexical retrieval
-   - Reciprocal Rank Fusion (RRF)
-   - targeted structured reranking for table-heavy percentage questions
-7. Sends only retrieved evidence to the LLM.
-8. Generates a grounded answer with an explicit abstention response when the report does not support the requested information.
-9. Returns source chunks with document and page metadata.
-10. Supports document-level filtering and deletion.
+<p>
+  <a href="https://rag-frontend-75wd.vercel.app">Live Demo</a>
+  ·
+  <a href="#architecture">Architecture</a>
+  ·
+  <a href="#evaluation">Evaluation</a>
+  ·
+  <a href="docs/PROJECT_REPORT.md">Project Report</a>
+  ·
+  <a href="docs/EVALUATION.md">Evaluation Methodology</a>
+</p>
 
-## Architecture
+</div>
 
-```text
-                         INGESTION
-PDF
- │
- ▼
-PDF validation
- │
- ▼
-Page-aware extraction
- │
- ▼
-Page-aware chunking ───────────────► text + page metadata
- │
- ▼
-MiniLM embeddings
- │
- ▼
-Qdrant vector store
+> [!IMPORTANT]
+> **Final benchmark:** 20 questions • 18 answerable • 2 unanswerable • **100% Recall@5 • 0.8213 MRR • 100% answer accuracy • 100% abstention accuracy**.
+>
+> These metrics are specific to the **RIL BRSR FY 2024–25** golden dataset and are not presented as a guarantee for arbitrary unseen PDFs.
 
-                          QUERY
-User question
- │
- ├──────────────► Dense retrieval ───┐
- │                                   │
- └──────────────► BM25 retrieval ────┤
-                                     ▼
-                            Reciprocal Rank Fusion
-                                     │
-                                     ▼
-                         Targeted structured reranking
-                                     │
-                                     ▼
-                              Top-5 evidence
-                                     │
-                                     ▼
-                            Grounded LLM generation
-                                     │
-                         ┌───────────┴───────────┐
-                         ▼                       ▼
-                   Supported answer          Abstention
-                         │
-                         ▼
-                  Answer + page sources
+---
+
+## ✦ What this project is
+
+RAG Compliance Copilot is a full-stack, evidence-grounded RAG system for querying large compliance and ESG reports.
+
+Instead of treating the LLM as the source of truth, the system explicitly separates:
+
+**retrieval → evidence selection → grounded generation → source inspection**
+
+It is built to handle the details that make compliance documents difficult to query reliably:
+
+- exact numerical values
+- reporting-year disambiguation
+- table-heavy content
+- page-level traceability
+- document-level filtering
+- unsupported questions and abstention
+
+---
+
+## 🧭 Architecture
+
+GitHub renders Mermaid diagrams directly inside Markdown, so the architecture below is interactive and remains close to the implementation. citeturn0search1turn0search0
+
+### End-to-end system
+
+```mermaid
+flowchart LR
+    U["👤 User"] --> FE["⚛️ React + Vite"]
+    FE --> API["⚡ FastAPI"]
+
+    API --> ING["📄 PDF Ingestion"]
+    ING --> EXT["Page-aware extraction"]
+    EXT --> CH["Chunking + metadata"]
+    CH --> EMB["MiniLM embeddings"]
+    EMB --> QD[("Qdrant")]
+
+    API --> DR["Dense retrieval"]
+    API --> BM["BM25 retrieval"]
+
+    QD --> DR
+    CH --> BM
+
+    DR --> RRF["RRF fusion"]
+    BM --> RRF
+    RRF --> RR["Targeted structured reranking"]
+    RR --> TOP["Top-5 evidence"]
+    TOP --> LLM["Groq LLM"]
+    LLM --> OUT["Grounded answer / abstention"]
+    TOP --> SRC["📑 Page-level sources"]
+
+    OUT --> FE
+    SRC --> FE
+
+    classDef app fill:#161b22,stroke:#58a6ff,color:#f0f6fc;
+    classDef retrieval fill:#161b22,stroke:#6e40c9,color:#f0f6fc;
+    classDef safe fill:#161b22,stroke:#39d353,color:#f0f6fc;
+    class U,FE,API,ING,EXT,CH,EMB,QD app;
+    class DR,BM,RRF,RR,TOP retrieval;
+    class LLM,OUT,SRC safe;
 ```
 
-## Key engineering features
+### Query path
 
-### Page-aware evidence
+```mermaid
+sequenceDiagram
+    participant User
+    participant API as FastAPI
+    participant Search as Hybrid Retriever
+    participant LLM as Groq
+    participant UI as React UI
 
-Each chunk retains:
+    User->>API: Ask compliance question
+    API->>Search: Dense + BM25 retrieval
+    Search->>Search: RRF + targeted reranking
+    Search-->>API: Top-5 evidence chunks
+    API->>LLM: Evidence + question
+    LLM-->>API: Grounded answer / abstention
+    API-->>UI: Answer + source pages
+    UI-->>User: Inspectable response
+```
 
-- `document_id`
-- `document_name`
-- `page_start`
-- `page_end`
-- `chunk_id`
-- source text
+---
 
-This makes generated answers auditable against the original report.
+## 🔬 Retrieval engineering
 
-### Hybrid retrieval
+The project deliberately compares retrieval strategies instead of assuming semantic search is sufficient.
 
-Dense retrieval captures semantic similarity and paraphrased questions. BM25 captures exact terminology, table labels, identifiers, and numerical expressions. RRF combines ranked lists without assuming that dense and BM25 raw scores share the same scale.
+| Strategy | Strength | Recall@5 | MRR |
+|---|---|---:|---:|
+| **Dense** | Semantic similarity / paraphrases | 77.78% | 0.7222 |
+| **BM25** | Exact terminology / table labels | 94.44% | **0.8352** |
+| **Hybrid + structured reranking** | Coverage + structured evidence | **100.00%** | 0.8213 |
 
-### Structured reranking
+![Retrieval benchmark](docs/assets/retrieval-benchmark.svg)
 
-BRSR reports contain structured tables where exact category and percentage evidence can matter more than broad semantic similarity. A narrow deterministic boost is applied only to specific percentage questions targeting female representation in categories such as Board of Directors or Key Management Personnel.
+### Why hybrid?
 
-### Grounded generation and abstention
+```mermaid
+flowchart TB
+    Q["Question"] --> D["Dense retrieval"]
+    Q --> B["BM25 lexical retrieval"]
+    D --> F["Reciprocal Rank Fusion"]
+    B --> F
+    F --> S{"Structured query?"}
+    S -->|Yes| T["Targeted deterministic boost"]
+    S -->|No| C["Keep fused ranking"]
+    T --> C
+    C --> E["Top-5 evidence"]
+```
 
-The generation prompt instructs the LLM to:
+**Design principle:** dense retrieval handles meaning; BM25 handles exact wording; RRF combines ranked evidence; the narrow structured reranker addresses table-heavy female-representation queries without changing unrelated query behavior.
 
-- use only supplied report context;
-- preserve numerical values exactly;
-- respect the requested reporting year and table row;
-- avoid unsupported inference;
-- return a fixed abstention response when the context is insufficient.
+---
 
-## Final evaluation
+## 📊 Final evaluation
 
-The project contains a fixed 20-question golden dataset based on the RIL BRSR FY 2024-25 report:
+![Final evaluation](docs/assets/final-evaluation.svg)
 
-- **18 answerable questions**
-- **2 unanswerable questions**
-- numerical extraction and table-oriented cases
-- reporting-year disambiguation
-- evidence-keyword validation
-- explicit abstention cases
+### Evaluation matrix
 
-### Retrieval benchmark
+| Dimension | Dataset | Result | What it demonstrates |
+|---|---|---:|---|
+| Retrieval coverage | 18 answerable | **100% Recall@5** | Required evidence reached the generator |
+| Ranking | 18 answerable | **0.8213 MRR** | Relevant evidence generally ranks highly |
+| Answer generation | 20 total | **100%** | Expected answers matched evaluator outcomes |
+| Abstention | 2 unsupported | **100%** | Unsupported questions were rejected correctly |
 
-| Retrieval strategy | Recall@5 | MRR |
-|---|---:|---:|
-| Dense | 77.78% | 72.22% |
-| BM25 | 94.44% | 83.52% |
-| Hybrid + structured reranking | **100.00%** | 82.13% |
+### The two safety cases
 
-These are retrieval-only measurements. The hybrid configuration achieved complete Top-5 evidence coverage on this benchmark, while BM25 had slightly higher MRR. The two metrics capture different properties.
+| Query type | Expected system behavior | Final result |
+|---|---|---|
+| Information present in report | Retrieve evidence → answer | ✅ Correct |
+| Information absent from report | Do not invent → abstain | ✅ Correct |
 
-### Final end-to-end benchmark
+The final run also included deliberately unsupported questions such as fictional moon-mining revenue and Mars exploration missions. Both produced correct abstention outcomes in the evaluator.
 
-| Metric | Result |
-|---|---:|
-| Questions | 20 |
-| Answerable | 18 |
-| Unanswerable | 2 |
-| Recall@5 | **100.00%** |
-| MRR | **0.8213** |
-| Answer accuracy | **100.00%** |
-| Abstention accuracy | **100.00%** |
+> [!NOTE]
+> **Accuracy scope matters.** The benchmark is intentionally tied to one corpus: RIL BRSR FY 2024–25. A new PDF can be ingested through the same pipeline, but its accuracy should be established with a new evaluation set.
 
-The final evaluation completed successfully. The detailed per-question results are stored in `evaluation/results/latest_results.json`.
+---
 
-Run the evaluator with:
+## 🧱 System components
+
+| Layer | Implementation | Responsibility |
+|---|---|---|
+| **Frontend** | React + Vite + CSS | Upload, query, source inspection |
+| **API** | FastAPI | Validation, orchestration, REST interface |
+| **PDF** | pypdf | Page-aware text extraction |
+| **Embeddings** | all-MiniLM-L6-v2 | Dense semantic representation |
+| **Vector DB** | Qdrant | Vector search + metadata filtering |
+| **Lexical** | rank-bm25 | Exact-term retrieval |
+| **Fusion** | RRF | Combine dense + lexical rankings |
+| **Reranking** | Deterministic structured boost | Table-focused retrieval |
+| **LLM** | Groq | Grounded response generation |
+| **Deployment** | Render + Vercel | Production hosting |
+
+---
+
+## 🛡️ Reliability and defensive engineering
+
+The system is designed around failure modes, not just the happy path.
+
+| Failure mode | Backend behavior |
+|---|---|
+| Non-PDF upload | ❌ Reject with validation error |
+| File > 100 MB | ❌ Reject with 413 |
+| Corrupt PDF | ❌ Reject with clear 422 |
+| No extractable text | ❌ Reject with clear 422 |
+| No searchable chunks | ❌ Reject with clear 422 |
+| Empty/invalid question | ❌ Reject with validation error |
+| Retrieval failure | ❌ Return service error |
+| LLM failure | ❌ Return service error |
+| Unsupported question | ✅ Explicit abstention |
+
+### Evidence model
+
+Every retrieved chunk carries:
+
+```text
+document_id
+document_name
+page_start
+page_end
+chunk_id
+source_text
+retrieval_score
+```
+
+That metadata is surfaced back to the UI so the user can inspect **where an answer came from**.
+
+---
+
+## 🚀 Product workflow
+
+```mermaid
+flowchart LR
+    A["1. Upload PDF"] --> B["2. Validate + extract"]
+    B --> C["3. Chunk + embed"]
+    C --> D["4. Index in Qdrant"]
+    D --> E["5. Ask question"]
+    E --> F["6. Hybrid retrieval"]
+    F --> G["7. Grounded generation"]
+    G --> H["8. Answer + sources"]
+```
+
+### Supported workflow
+
+- 📄 Upload a text-based PDF
+- 🗂️ Select an indexed document
+- 🔎 Ask a compliance question
+- 🧠 Retrieve evidence using hybrid search
+- 📌 Inspect source pages/chunks
+- 🛑 Receive an abstention when evidence is insufficient
+- 🗑️ Delete indexed documents
+
+---
+
+## 🧪 Reproducible evaluation
+
+The repository contains:
+
+```text
+evaluation/
+├── golden_questions.json
+├── run_evaluation.py
+├── benchmark_retrieval.py
+└── results/
+    └── latest_results.json
+```
+
+Run the full benchmark:
 
 ```powershell
 python evaluation\\run_evaluation.py
 ```
 
-The retrieval-only benchmark can be run repeatedly without calling the LLM:
+Run retrieval-only experiments without calling the LLM:
 
 ```powershell
 python evaluation\\benchmark_retrieval.py
 ```
 
-### Scope of the results
+The detailed evaluation methodology and project report are maintained separately so the README remains a high-signal project overview.
 
-The 100% figures are **specific to the fixed RIL BRSR FY 2024-25 benchmark**. They are not a guarantee of 100% accuracy for arbitrary PDFs or unseen question distributions.
+---
 
-The application is designed to ingest other text-based PDFs, but a new document corpus requires its own evaluation set to establish retrieval and answer quality.
+## 🌐 Deployment
 
-## Documentation
+| Service | URL |
+|---|---|
+| **Frontend** | https://rag-frontend-75wd.vercel.app |
+| **Backend** | https://rag-compliance-copilot-1.onrender.com |
+| **Health** | https://rag-compliance-copilot-1.onrender.com/health |
 
-- [System architecture](docs/ARCHITECTURE.md)
-- [End-to-end workflow](docs/WORKFLOW.md)
-- [Retrieval pipeline](docs/RETRIEVAL_PIPELINE.md)
-- [Project report](docs/PROJECT_REPORT.md)
-- [Evaluation methodology](docs/EVALUATION.md)
+> [!TIP]
+> The production frontend and backend are separate deployments. The frontend communicates with the FastAPI API through `VITE_API_URL`.
 
-## Tech stack
+---
 
-### Backend
-
-- Python
-- FastAPI
-- pypdf
-- Qdrant
-- sentence-transformers / Hugging Face Inference API
-- rank-bm25
-- Groq
-
-### Frontend
-
-- React
-- Vite
-- JavaScript
-- CSS
-
-### Deployment
-
-- Backend: Render
-- Frontend: Vercel
-- Vector database: Qdrant Cloud
-- LLM: Groq
-
-## Local development
+## ⚙️ Local development
 
 ### Backend
 
@@ -214,69 +317,81 @@ npm install
 npm run dev
 ```
 
-Open:
+Open `http://localhost:5173`.
 
-```text
-http://localhost:5173
-```
+---
 
-The frontend defaults to `http://localhost:8000` when `VITE_API_URL` is not configured.
-
-## API endpoints
+## 📡 API surface
 
 | Endpoint | Method | Purpose |
 |---|---|---|
 | `/health` | GET | Service health |
 | `/documents` | GET | List indexed documents |
-| `/ingest` | POST | Upload and index a PDF |
-| `/documents/{document_id}` | DELETE | Delete a document and its chunks |
-| `/query` | POST | Retrieve evidence and generate a grounded answer |
+| `/ingest` | POST | Upload and index PDF |
+| `/documents/{document_id}` | DELETE | Delete document + chunks |
+| `/query` | POST | Retrieve evidence + generate answer |
 
-## Defensive handling
+---
 
-The backend validates:
+## 📁 Documentation
 
-- PDF file type
-- **100 MB upload limit**
-- corrupt/unreadable PDFs
-- PDFs without extractable text
-- PDFs that produce no searchable chunks
-- empty/invalid questions
-- retrieval failures
-- answer-generation failures
+| Document | Purpose |
+|---|---|
+| [Architecture](docs/ARCHITECTURE.md) | System design + deployment architecture |
+| [Workflow](docs/WORKFLOW.md) | End-to-end operational flow |
+| [Retrieval Pipeline](docs/RETRIEVAL_PIPELINE.md) | Dense/BM25/RRF/reranking details |
+| [Evaluation](docs/EVALUATION.md) | Dataset, metrics, final results |
+| [Project Report](docs/PROJECT_REPORT.md) | Full project write-up |
 
-The frontend mirrors the upload restriction and surfaces API errors to the user.
+---
 
-## Project roadmap
+## 🎯 Engineering highlights
 
-- [x] **M1 — Core RAG:** PDF ingestion, chunking, embeddings, vector retrieval, grounded generation
-- [x] **M2 — Evidence grounding:** page-aware sources, document IDs, filtering, abstention
-- [x] **M3 — Retrieval:** BM25 + dense hybrid search, RRF, structured reranking
-- [x] **M4 — Application:** FastAPI backend, React frontend, deployment
-- [x] **M5 — Hardening:** validation, error handling, 100 MB upload limit, deletion UX, CI checks
-- [x] **M6 — Final evaluation:** completed 20-question golden-set evaluation
-- [x] **M7 — Finalization:** architecture, workflow, retrieval, evaluation and project-report documentation
+- **Page-aware ingestion** rather than blind text splitting
+- **Hybrid retrieval** rather than vector-only search
+- **RRF fusion** rather than raw-score mixing
+- **Targeted structured reranking** for table-heavy queries
+- **Explicit abstention** rather than forced answers
+- **Document-level filtering and deletion**
+- **100 MB upload guardrail**
+- **Backend error hardening**
+- **Automated golden-set evaluation**
+- **Production deployment**
+- **Source traceability throughout the answer path**
 
-## Limitations
+---
 
-- The current extraction path is text-based; scanned/image-only PDFs are rejected.
-- The golden dataset currently represents one BRSR report, so broader multi-company evaluation is still required.
-- The LLM is not treated as an independent source of facts.
-- Retrieval scores are ranking signals, not probabilities of answer correctness.
-- Final answer accuracy is benchmark-specific and based on the project's expected-answer matching logic.
+## ⚠️ Known limitations
 
-## Research contribution
+- Current extraction is optimized for text-based PDFs.
+- Scanned/image-only PDFs are rejected; OCR is future scope.
+- The golden benchmark covers one BRSR report.
+- Broader multi-company and multi-year evaluation is still required.
+- Retrieval scores are ranking signals, not probabilities.
+- The reported 100% answer accuracy is specific to the project's expected-answer matching logic and benchmark; it is not a claim of universal factual accuracy.
 
-The main experimentally testable contribution is the comparison of retrieval strategies on structured compliance reports:
+---
+
+## 🗺️ Project maturity
 
 ```text
-Dense retrieval
-      vs
-BM25 retrieval
-      vs
-Hybrid RRF
-      vs
-Hybrid RRF + targeted structured reranking
+M1 Core RAG             ████████████████████  COMPLETE
+M2 Evidence grounding  ████████████████████  COMPLETE
+M3 Retrieval            ████████████████████  COMPLETE
+M4 Application          ████████████████████  COMPLETE
+M5 Hardening            ████████████████████  COMPLETE
+M6 Evaluation           ████████████████████  COMPLETE
+M7 Documentation        ████████████████████  COMPLETE
 ```
 
-The final benchmark reports both retrieval and end-to-end metrics, with abstention explicitly evaluated for unsupported questions.
+**Status: implementation + deployment + evaluation + documentation complete.**
+
+---
+
+<div align="center">
+
+### Built as an engineering system, not just an LLM demo.
+
+**Retrieve. Ground. Verify. Abstain when evidence is missing.**
+
+</div>
