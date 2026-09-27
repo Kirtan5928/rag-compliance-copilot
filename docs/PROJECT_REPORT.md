@@ -1,4 +1,4 @@
-# RAG Compliance Copilot — Project Report Draft
+# RAG Compliance Copilot — Project Report
 
 ## 1. Problem Statement
 
@@ -26,8 +26,6 @@ The system is designed around three practical requirements:
 - Evaluate retrieval and generation separately.
 
 ## 4. Proposed System
-
-The system consists of:
 
 ```text
 PDF → extraction → page-aware chunks → embeddings/Qdrant
@@ -141,7 +139,7 @@ How highly the first chunk containing all required evidence is ranked.
 
 ### Answer accuracy
 
-Whether the generated answer matches the expected answer.
+Whether the generated answer matches the expected answer according to the evaluator's matching logic.
 
 ### Abstention accuracy
 
@@ -157,18 +155,23 @@ Whether unsupported questions are rejected correctly.
 
 The hybrid configuration achieved complete Top-5 evidence coverage on this benchmark. BM25 produced a slightly higher MRR, so the results demonstrate that coverage and ranking position are distinct evaluation dimensions.
 
-## 16. Previous End-to-End Baseline
+## 16. Final End-to-End Results
 
-A previous clean end-to-end run, before the final structured-query fix, recorded:
+The final 20-question evaluation completed successfully on 27 September 2026.
 
 | Metric | Result |
 |---|---:|
-| Recall@5 | 94.44% |
-| MRR | 79.35% |
-| Answer accuracy | 94.44% |
-| Abstention accuracy | 100.00% |
+| Questions | 20 |
+| Answerable | 18 |
+| Unanswerable | 2 |
+| Recall@5 | **100.00%** |
+| MRR | **0.8213** |
+| Answer accuracy | **100.00%** |
+| Abstention accuracy | **100.00%** |
 
-The final post-fix 20-question LLM evaluation is still pending because the available generation quota was exhausted during the previous run. These values must therefore be presented as a baseline, not as final results.
+All 18 answerable questions had the required evidence within the Top-5 retrieval results. The two intentionally unanswerable questions had no relevant evidence rank and were correctly handled by the system's abstention behavior.
+
+These are **benchmark-specific results for the RIL BRSR FY 2024-25 dataset**. They do not imply 100% accuracy on arbitrary unseen PDFs.
 
 ## 17. Example Structured Evidence Case
 
@@ -188,7 +191,7 @@ The targeted retrieval signal places the relevant table evidence into the Top-5 
 - The golden set currently covers one BRSR report.
 - Broader multi-company and multi-year evaluation is still required.
 - Retrieval scores are ranking signals, not probabilities.
-- Final LLM evaluation depends on available provider quota.
+- The final answer-accuracy metric is based on the project's fixed expected-answer matching logic rather than a human evaluation study.
 
 ## 19. Novelty / Contribution
 
@@ -210,7 +213,6 @@ The project also treats abstention and page-level evidence as explicit system be
 
 ## 20. Future Scope
 
-- Complete the post-fix 20-question end-to-end evaluation.
 - Expand the golden set across multiple companies and reporting years.
 - Add OCR for scanned reports.
 - Add stronger reranking models for broader table retrieval.
@@ -222,4 +224,4 @@ The project also treats abstention and page-level evidence as explicit system be
 
 RAG Compliance Copilot provides a complete document-grounded pipeline for BRSR/ESG question answering. Its architecture combines page-aware ingestion, dense retrieval, BM25, RRF, targeted structured reranking, grounded generation, abstention, and source display.
 
-The current retrieval benchmark demonstrates complete Top-5 evidence coverage on the fixed dataset for the hybrid configuration. The final project evaluation should preserve the separation between retrieval metrics and generation metrics and clearly identify the previous end-to-end numbers as a baseline until the post-fix run is completed.
+On the fixed RIL BRSR FY 2024-25 benchmark, the final system achieved 100% Recall@5, 0.8213 MRR, 100% answer accuracy, and 100% abstention accuracy. The results are explicitly scoped to the benchmark and do not claim universal performance on arbitrary PDFs.
